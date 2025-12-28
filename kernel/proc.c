@@ -26,6 +26,8 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+volatile bool panicked = false;
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -429,6 +431,10 @@ scheduler(void)
 
   c->proc = 0;
   for(;;){
+    // If the system is in a panicked state, stop the HART immediately
+    if(panicked)
+      panic_hart();
+
     // The most recent process to run may have had interrupts
     // turned off; enable them to avoid a deadlock if all
     // processes are waiting. Then turn them back off
@@ -687,4 +693,16 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+// Halt HART gracefully
+void panic_hart() {
+  // Mask / disable all S mode interupts and halt the CPU
+  w_sie(0);
+  intr_off();
+  for(;;)
+    asm volatile("wfi");
+
+  // TODO: Do some sort of crash dump.
+  // Also, maybe implement a panic halt via IPI.
 }

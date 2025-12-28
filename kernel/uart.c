@@ -42,8 +42,8 @@ static struct spinlock tx_lock;
 static int tx_busy;           // is the UART busy sending?
 static int tx_chan;           // &tx_chan is the "wait channel"
 
-extern volatile int panicking; // from printf.c
-extern volatile int panicked; // from printf.c
+extern volatile bool panicking; // from printf.c
+extern volatile bool panicked; // from proc.c
 
 void
 uartinit(void)
@@ -105,20 +105,20 @@ uartwrite(char buf[], int n)
 void
 uartputc_sync(int c)
 {
-  if(panicking == 0)
-    push_off();
+  // Prevent other HARTs from printing to uart
+  // once the system is in a panicked state.
+  if(panicked)
+    panic_hart();
 
-  if(panicked){
-    for(;;)
-      ;
-  }
+  if(!panicking)
+    push_off();
 
   // wait for UART to set Transmit Holding Empty in LSR.
   while((ReadReg(LSR) & LSR_TX_IDLE) == 0)
     ;
   WriteReg(THR, c);
 
-  if(panicking == 0)
+  if(!panicking)
     pop_off();
 }
 

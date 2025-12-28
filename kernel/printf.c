@@ -15,8 +15,8 @@
 #include "defs.h"
 #include "proc.h"
 
-volatile int panicking = 0; // printing a panic message
-volatile int panicked = 0; // spinning forever at end of a panic
+volatile bool panicking = false; // printing a panic message
+extern volatile bool panicked; // from proc.c
 
 // lock to avoid interleaving concurrent printf's.
 static struct {
@@ -67,7 +67,7 @@ printf(char *fmt, ...)
   int i, cx, c0, c1, c2;
   char *s;
 
-  if(panicking == 0)
+  if(!panicking)
     acquire(&pr.lock);
 
   va_start(ap, fmt);
@@ -127,7 +127,7 @@ printf(char *fmt, ...)
   }
   va_end(ap);
 
-  if(panicking == 0)
+  if(!panicking)
     release(&pr.lock);
 
   return 0;
@@ -136,12 +136,11 @@ printf(char *fmt, ...)
 void
 panic(char *s)
 {
-  panicking = 1;
+  panicking = true;
   printf("panic: ");
   printf("%s\n", s);
-  panicked = 1; // freeze uart output from other CPUs
-  for(;;)
-    ;
+  panicked = true; // freeze uart output from other CPUs
+  panic_hart();
 }
 
 void
