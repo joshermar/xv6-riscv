@@ -84,7 +84,7 @@ balloc(uint dev)
     }
     brelse(bp);
   }
-  printf("balloc: out of blocks\n");
+  kprintf("balloc: out of blocks\n");
   return 0;
 }
 
@@ -215,7 +215,7 @@ ialloc(uint dev, short type)
     }
     brelse(bp);
   }
-  printf("ialloc: no inodes\n");
+  kprintf("ialloc: no inodes\n");
   return 0;
 }
 
@@ -378,7 +378,7 @@ ireclaim(int dev)
     struct buf *bp = bread(dev, IBLOCK(inum, sb));
     struct dinode *dip = (struct dinode *)bp->data + inum % IPB;
     if (dip->type != 0 && dip->nlink == 0) {  // is an orphaned inode
-      printf("ireclaim: orphaned inode %d\n", inum);
+      kprintf("ireclaim: orphaned inode %d\n", inum);
       ip = iget(dev, inum);
     }
     brelse(bp);
